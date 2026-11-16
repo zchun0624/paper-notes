@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<!--
+  論文頁範本。新增論文時：
+  1. 複製到 papers/<slug>/index.html
+  2. 把所有 {{...}} 換成 notes/<slug>.md 的內容
+  3. 不要改 class 名稱、區塊順序、<head> 裡的引用
+  完整規則見 AGENTS.md 第四、五節。
+-->
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{SHORT_TITLE}}｜論文筆記庫</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/css/style.css">
+</head>
+<body>
+
+<header class="topbar"><div class="topbar-inner">
+  <a class="brand" href="../../">← 論文筆記庫 <b>/</b> papers</a>
+  <span>{{READ_DATE}}・{{STATUS}}</span>
+</div></header>
+
+<div class="paper-head">
+  <div class="venue">{{VENUE}}</div>
+  <h1>{{TITLE}}</h1>
+  <p class="zh">{{TITLE_ZH}}</p>
+  <div class="meta">
+    <span><b>作者</b> {{AUTHORS}}</span>
+    <span><b>DOI</b> <a href="https://doi.org/{{DOI}}" target="_blank" rel="noopener">{{DOI}}</a></span>
+    <span><b>評分</b> {{RATING}}</span><!-- 還沒確認時寫「🤖 建議 ⭐⭐⭐⭐（待確認）」 -->
+  </div>
+  <div class="chips">
+    <!-- 每個標籤一個 span，標籤只能用 AGENTS.md 第八節的詞彙 -->
+    <span class="tag">{{TAG}}</span>
+  </div>
+</div>
+
+<div class="layout">
+  <nav class="toc" aria-label="目錄"><ol>
+    <li><a href="#s1">① 一句話總結</a></li>
+    <li><a href="#s2">② 問題卡</a></li>
+    <li><a href="#s3">③ 架構圖</a></li>
+    <li><a href="#s4">④ 方法重點</a></li>
+    <li><a href="#s5">⑤ 結果解讀</a></li>
+    <li><a href="#s6">⑥ 術語表</a></li>
+    <li><a href="#s7">⑦ 先備知識</a></li>
+    <li><a href="#s8">⑧ 跟我研究的關係</a></li>
+  </ol></nav>
+
+  <main>
+    <section class="section" id="s1">
+      <h2><span class="no">01</span>一句話總結</h2>
+      <p class="tldr-box">{{TLDR}}</p>
+    </section>
+
+    <section class="section" id="s2">
+      <h2><span class="no">02</span>問題卡</h2>
+      <div class="problem-grid">
+        <div class="cell"><h3>研究問題</h3><p>{{QUESTION}}</p></div>
+        <div class="cell"><h3>為什麼重要</h3><p>{{WHY}}</p></div>
+        <div class="cell"><h3>舊方法的缺點</h3><ul><li>{{GAP}}</li></ul></div>
+        <div class="cell"><h3>本文貢獻</h3><ol><li>{{CONTRIBUTION}}</li></ol></div>
+      </div>
+    </section>
+
+    <section class="section" id="s3">
+      <h2><span class="no">03</span>架構圖</h2>
+      <p class="legend"><i></i>黑底方塊＝本文提出或修改的部分</p>
+      <!-- 必備：圖 1 論文脈絡圖、圖 2 系統架構圖、最後一張方法流程圖。
+           中間依論文內容再加圖（控制平面、訊號模型、MDP 設計……），張數不限。
+           每張圖複製下面這組 h3 + figure，編號依序遞增。 -->
+      <h3>圖 1　論文脈絡圖</h3>
+      <figure class="diagram">
+        <pre class="mermaid">
+{{MERMAID_CONTEXT}}
+        </pre>
+        <figcaption>{{CAPTION}}</figcaption>
+      </figure>
+      <h3>圖 2　系統架構圖</h3>
+      <figure class="diagram">
+        <pre class="mermaid">
+{{MERMAID_SYSTEM}}
+        </pre>
+        <figcaption>{{CAPTION}}</figcaption>
+      </figure>
+      <h3>圖 N　{{其他架構圖標題}}</h3>
+      <figure class="diagram">
+        <pre class="mermaid">
+{{MERMAID_OTHER}}
+        </pre>
+        <figcaption>{{CAPTION}}</figcaption>
+      </figure>
+      <h3>圖 N　方法流程圖：{{副標}}</h3>
+      <figure class="diagram">
+        <pre class="mermaid">
+{{MERMAID_FLOW}}
+        </pre>
+        <figcaption>{{CAPTION}}</figcaption>
+      </figure>
+    </section>
+
+    <section class="section" id="s4">
+      <h2><span class="no">04</span>方法重點</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>方塊</th><th>在做什麼</th><th>頁碼</th></tr></thead>
+        <tbody>
+          <tr><td>{{BLOCK}}</td><td>{{WHAT}}</td><td class="page">{{PAGE}}</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section class="section" id="s5">
+      <h2><span class="no">05</span>結果解讀</h2>
+      <!-- 固定 3 個 stat：最重要的改善幅度、本文的關鍵數字、額外亮點 -->
+      <div class="stats">
+        <div class="stat"><div class="big">{{STAT1}}</div><div class="label">{{STAT1_LABEL}}</div></div>
+        <div class="stat"><div class="big">{{STAT2}}</div><div class="label">{{STAT2_LABEL}}</div></div>
+        <div class="stat"><div class="big">{{STAT3}}</div><div class="label">{{STAT3_LABEL}}</div></div>
+      </div>
+      <dl class="kv">
+        <dt>實驗設定</dt><dd>{{SETUP}}</dd>
+        <dt>比較對象</dt><dd>{{BASELINES}}</dd>
+        <dt>評估指標</dt><dd>{{METRICS}}</dd>
+      </dl>
+      <h3>關鍵數字</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>方法</th><th>{{METRIC_COLS}}</th></tr></thead>
+        <tbody>
+          <!-- 本文方法那一列加 class="ours" -->
+          <tr class="ours"><td>本文方法</td><td class="num">{{VALUE}}</td></tr>
+        </tbody>
+      </table></div>
+      <h3>其他實驗</h3>
+      <ul><li>{{OTHER_RESULT}}</li></ul>
+      <h3>限制</h3>
+      <ul>
+        <li><span class="badge nice">論文自述</span>{{LIMIT_PAPER}}</li>
+        <li><span class="badge ai">🤖 AI 觀察・待確認</span>{{LIMIT_AI}}</li>
+      </ul>
+    </section>
+
+    <section class="section" id="s6">
+      <h2><span class="no">06</span>術語表</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>縮寫</th><th>全名</th><th>白話解釋</th><th>頁碼</th></tr></thead>
+        <tbody>
+          <tr><td><b>{{ABBR}}</b></td><td>{{FULL}}</td><td>{{PLAIN}}</td><td class="page">{{PAGE}}</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section class="section" id="s7">
+      <h2><span class="no">07</span>先備知識</h2>
+      <ul class="prereq">
+        <li><span class="badge must">必懂</span>{{MUST}}</li>
+        <li><span class="badge nice">知道就好</span>{{NICE}}</li>
+      </ul>
+    </section>
+
+    <section class="section" id="s8">
+      <h2><span class="no">08</span>跟我研究的關係</h2>
+      <!-- AI 草稿放在 todo-box；我說「確認」之後，才可以拿掉 todo-box 改成一般段落 -->
+      <div class="todo-box">
+        <strong>🤖 AI 草稿・待我修改</strong>
+        <ul>
+          <li><b>可以借用的地方：</b>{{BORROW}}</li>
+          <li><b>跟我研究的差異：</b>{{DIFF}}</li>
+          <li><b>我還要查的問題：</b>{{QUESTIONS}}</li>
+        </ul>
+        <p><b>建議評分：</b>{{RATING_SUGGEST}}</p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<footer class="foot">筆記由 AI 依 AGENTS.md 規則整理、本人校對。原文版權屬原作者與出版單位，本頁僅為個人閱讀摘要。</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script src="../../assets/js/paper.js"></script>
+</body>
+</html>

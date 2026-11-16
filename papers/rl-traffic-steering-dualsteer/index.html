@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RL Traffic Steering for DualSteer｜論文筆記庫</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/css/style.css">
+</head>
+<body>
+
+<header class="topbar"><div class="topbar-inner">
+  <a class="brand" href="../../">← 論文筆記庫 <b>/</b> papers</a>
+  <span>2026-11-16・精讀完成</span>
+</div></header>
+
+<div class="paper-head">
+  <div class="venue">EuCNC/6G Summit 2026 ・ IEEE</div>
+  <h1>Reinforcement Learning-based Traffic Steering for TN-NTN Integrated DualSteer Systems</h1>
+  <p class="zh">以強化學習為基礎的 TN-NTN 整合 DualSteer 系統流量導引</p>
+  <div class="meta">
+    <span><b>作者</b> Jimin Jeon, Sung Hyuk Byun, Hyun Kyung Yoo, Seokwon Jang, Namseok Ko（ETRI）</span>
+    <span><b>DOI</b> <a href="https://doi.org/10.1109/EUCNC/6GSUMMIT68295.2026.11577529" target="_blank" rel="noopener">10.1109/EUCNC/6GSUMMIT68295.2026.11577529</a></span>
+    <span><b>評分</b> 🤖 建議 ⭐⭐⭐⭐（待確認）</span>
+  </div>
+  <div class="chips">
+    <span class="tag">TN-NTN</span>
+    <span class="tag">衛星通訊</span>
+    <span class="tag">3GPP</span>
+    <span class="tag">強化學習</span>
+    <span class="tag">流量導引</span>
+  </div>
+</div>
+
+<div class="layout">
+  <nav class="toc" aria-label="目錄"><ol>
+    <li><a href="#s1">① 一句話總結</a></li>
+    <li><a href="#s2">② 問題卡</a></li>
+    <li><a href="#s3">③ 架構圖</a></li>
+    <li><a href="#s4">④ 方法重點</a></li>
+    <li><a href="#s5">⑤ 結果解讀</a></li>
+    <li><a href="#s6">⑥ 術語表</a></li>
+    <li><a href="#s7">⑦ 先備知識</a></li>
+    <li><a href="#s8">⑧ 跟我研究的關係</a></li>
+  </ol></nav>
+
+  <main>
+    <section class="section" id="s1">
+      <h2><span class="no">01</span>一句話總結</h2>
+      <p class="tldr-box">在 3GPP Release 19 的 DualSteer 架構下，用一個集中式 DQN 代理，同時決定每個使用者的下行流量走地面網路（TN）還是低軌衛星（NTN），<strong>在地面回程塞車之前就先把一部分使用者分流到衛星</strong>，封包遺失率比 3GPP 的 Smallest Delay 規則低 79%。</p>
+    </section>
+
+    <section class="section" id="s2">
+      <h2><span class="no">02</span>問題卡</h2>
+      <div class="problem-grid">
+        <div class="cell"><h3>研究問題</h3><p>多個使用者（UE）同時擁有 TN 與 NTN 兩條路徑時，<strong>何時、哪些、多少</strong> UE 要切到 NTN，才能同時兼顧可靠度（PLR）與延遲（RTT）？（p.1）</p></div>
+        <div class="cell"><h3>為什麼重要</h3><p>TN-NTN 整合是 6G「到處都有網路」的核心技術；Rel-19 DualSteer 讓 UE 用兩張 USIM 同時維持 TN 與 NTN 兩個連線。在災區、海上這類小型基地台場景，地面回程容量有限，很容易塞車。（p.1–2）</p></div>
+        <div class="cell"><h3>舊方法的缺點</h3><ul>
+          <li>DualSteer 現有三種規則式模式（Active-Standby、Smallest Delay、Priority-Based）都是<strong>貪婪式</strong>：每個 UE 各自挑當下比較好的路徑，不管其他 UE 的選擇。（p.1）</li>
+          <li>Smallest Delay 因為地面傳播延遲永遠比衛星短，幾乎把所有 UE 都丟到 TN，造成 TN 回程壅塞。（p.1）</li>
+          <li>既有 RL 研究：LEO 換手只考慮單一 UE；地面 RAT 選擇沒考慮衛星的 RTT 不對稱與仰角變化；衛星－地面資源管理處理的是排程與容量，不是逐 UE 的流量導引。（p.2）</li>
+        </ul></div>
+        <div class="cell"><h3>本文貢獻</h3><ol>
+          <li>把 DualSteer 下行導引寫成 MDP，集中式代理觀測兩條路徑的 PLR／RTT，<strong>一次決定所有 UE 的路徑</strong>，考慮 UE 之間的負載耦合。（p.2）</li>
+          <li>提出「可靠度／延遲效率」獎勵函數，把封包遺失和延遲合成單一指標。（p.2、式 10）</li>
+          <li>模擬顯示 PLR 大幅低於所有規則式方法，接近窮舉搜尋，但推論快最多 807 倍。（p.2、p.7）</li>
+        </ol></div>
+      </div>
+    </section>
+
+    <section class="section" id="s3">
+      <h2><span class="no">03</span>架構圖</h2>
+      <p class="legend"><i></i>黑底方塊＝本文提出或修改的部分</p>
+      <h3>圖 1　論文脈絡圖</h3>
+      <figure class="diagram">
+        <pre class="mermaid">
+flowchart TD
+  P["問題：多個 UE 同時有 TN 與 NTN 兩條路徑<br/>何時、哪些、多少 UE 要切到 NTN？"]
+  P --> G1["缺口 1：DualSteer 現有規則都是貪婪式<br/>每個 UE 各選各的，不管別人"]
+  P --> G2["缺口 2：既有 RL 研究沒處理<br/>Rel-19 DualSteer 的逐 UE 導引"]
+  G1 --> M["方法：集中式 DQN<br/>一次決定所有 UE 走哪條路"]
+  G2 --> M
+  M --> R1["結果 1：PLR 2.0%、RTT 3.9 ms<br/>接近窮舉搜尋（1.7%、2.9 ms）"]
+  M --> R2["結果 2：每步推論 0.06–0.08 ms<br/>比窮舉搜尋快最多 807 倍"]
+  R1 --> L["限制：動作空間 2^N_UE 指數成長<br/>只適合小型基地台"]
+  R2 --> L
+  class M proposed
+  classDef proposed fill:#111111,stroke:#111111,stroke-width:2px,color:#FFFFFF
+        </pre>
+        <figcaption>依 Abstract、Section I、V 整理（p.1–2、p.7）。這篇從什麼問題出發、缺什麼、怎麼解、解得怎樣。</figcaption>
+      </figure>
+      <h3>圖 2　系統架構圖</h3>
+      <figure class="diagram">
+        <pre class="mermaid">
+flowchart TB
+  UE["UE（雙 USIM）<br/>同時維持兩個 PDU session"]
+  subgraph TNpath["TN 地面路徑"]
+    BS["小型基地台<br/>3.5 GHz"] --> TNB["TN 回程<br/>100 Mbps"]
+  end
+  subgraph NTNpath["NTN 衛星路徑"]
+    SAT["LEO 衛星<br/>600 km・S-band"] --> FL["Feeder link<br/>100 Mbps"]
+  end
+  UE --- BS
+  UE --- SAT
+  TNB --> UPF["H-UPF<br/>（錨點使用者平面）"]
+  FL --> UPF
+  UPF -. 週期探測 .-> PMFP["PMFP 量測<br/>兩條路徑的 PLR、RTT"]
+  PMFP --> AGENT["DQN 導引代理<br/>部署在 H-UPF"]
+  AGENT -- 每個 UE 走 TN 或 NTN --> UPF
+  class AGENT proposed
+  classDef proposed fill:#111111,stroke:#111111,stroke-width:2px,color:#FFFFFF
+        </pre>
+        <figcaption>依 Fig. 1 與 Section II 整理（p.2–3）。UE 同時連到地面與衛星兩條路徑，DQN 代理依 PMFP 量測決定每個 UE 的下行走哪一條。</figcaption>
+      </figure>
+      <h3>圖 3　控制平面：導引規則怎麼下發</h3>
+      <figure class="diagram">
+        <pre class="mermaid">
+flowchart TD
+  PCF["PCF<br/>政策控制"] -- "DualSteer-aware PCC rule" --> SMF["SMF<br/>連線管理"]
+  SMF -- "DualSteer Rule（經 NAS）" --> UE["UE"]
+  SMF -- "N4 rule" --> UPF["H-UPF"]
+  subgraph MODES["可選的導引模式"]
+    direction TB
+    M1["Active-Standby<br/>主路徑斷了才切"]
+    M2["Smallest Delay<br/>選 RTT 小的"]
+    M3["Priority-Based<br/>依優先順序與門檻"]
+    M4["DQN 導引<br/>本文新增的模式"]
+    M1 ~~~ M2 ~~~ M3 ~~~ M4
+  end
+  MODES --> UPF
+  class M4 proposed
+  classDef proposed fill:#111111,stroke:#111111,stroke-width:2px,color:#FFFFFF
+        </pre>
+        <figcaption>依 Section I、II-A 文字整理（p.1–3），論文 Fig. 1 上半部。DQN 是加在既有三種規則旁邊的第四種模式。</figcaption>
+      </figure>
+      <h3>圖 4　PLR 與 RTT 怎麼算出來</h3>
+      <figure class="diagram">
+        <pre class="mermaid">
+flowchart TD
+  POS["UE 位置、衛星仰角 θ(t)"] --> PL["路徑損耗<br/>TN：TR 38.901 UMi<br/>NTN：TR 38.811、斜距（式 2）"]
+  PL --> SNR["接收 SNR Γ（式 3）"]
+  SNR --> PER["無線端錯誤率 PER<br/>SNR 的 sigmoid（式 4）"]
+  LOAD["這條路徑上的 UE 數 × 15 Mbps"] --> BH["回程壅塞遺失<br/>max(0, 1 − 容量 ÷ 總需求)（式 5）"]
+  PER --> PLR["總封包遺失率 PLR（式 6）"]
+  BH --> PLR
+  PROP["傳播延遲 = 距離 ÷ 光速"] --> RTT["RTT（式 7）<br/>成功：2 × 傳播延遲<br/>遺失：timeout 懲罰"]
+  PLR --> RTT
+        </pre>
+        <figcaption>依 Section II-B、II-C 文字整理（p.3）。這是論文的模擬模型，不是本文提出的方法，所以沒有黑底方塊。</figcaption>
+      </figure>
+      <h3>圖 5　MDP 設計：狀態、動作、獎勵</h3>
+      <figure class="diagram">
+        <pre class="mermaid">
+flowchart TD
+  subgraph S["狀態 s_t（4 × N_UE 個數）"]
+    S1["UE 1：PLR_TN、PLR_NTN、RTT_TN、RTT_NTN"]
+    S2["UE 2：同上 4 個數"]
+    SN["UE N_UE：同上 4 個數"]
+  end
+  S --> Q["Q 網路<br/>2 層隱藏層 × 256 神經元"]
+  Q --> A["動作 a_t：每個 UE 一個 0 或 1<br/>共 2^N_UE 種，編成一個整數"]
+  A --> ENV["網路環境<br/>依式 5–7 算出新的 PLR、RTT"]
+  ENV --> R["獎勵 r_t（式 10）<br/>（1 − 平均 PLR）÷（平均 RTT ÷ τnorm + 1）"]
+  ENV -- "下一個狀態" --> S
+  R --> Q
+  class Q,R proposed
+  classDef proposed fill:#111111,stroke:#111111,stroke-width:2px,color:#FFFFFF
+        </pre>
+        <figcaption>依 Section III-A 文字整理（p.3–4）。代理一次看所有 UE 的狀態，一次輸出所有 UE 的路徑。</figcaption>
+      </figure>
+      <h3>圖 6　方法流程圖：DQN 的訓練與決策迴圈</h3>
+      <figure class="diagram">
+        <pre class="mermaid">
+flowchart TD
+  A["每個決策週期 Td"] --> B["PMFP 探測兩條路徑<br/>（含沒在用的 standby 路徑）"]
+  B --> C["組成狀態 s_t<br/>每個 UE 4 個數：PLR_TN、PLR_NTN、RTT_TN、RTT_NTN"]
+  C --> D["DQN 一次前向傳遞"]
+  D --> E["動作 a_t：長度 N_UE 的 0/1 向量<br/>0 = TN、1 = NTN"]
+  E --> F["H-UPF 依動作導引下行流量"]
+  F --> G["計算獎勵 r_t<br/>（1 − PLR）÷（RTT ÷ τnorm + ζ）"]
+  G --> H{"訓練中？"}
+  H -- 是 --> I["存入 replay buffer<br/>抽 minibatch 更新 Q 網路<br/>定期更新 target 網路"]
+  H -- 否 --> A
+  I --> A
+  class D,E,G proposed
+  classDef proposed fill:#111111,stroke:#111111,stroke-width:2px,color:#FFFFFF
+        </pre>
+        <figcaption>依 Section III 與 Algorithm 1 整理（p.3–4）。</figcaption>
+      </figure>
+    </section>
+
+    <section class="section" id="s4">
+      <h2><span class="no">04</span>方法重點</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>方塊</th><th>在做什麼</th><th>頁碼</th></tr></thead>
+        <tbody>
+          <tr><td>DualSteer 架構</td><td>每個 UE 有兩張 USIM、兩個 PDU session，綁成一個 DSG。只能「切換」不能「分流」，同一時間每個 UE 的下行只走一條路徑（式 1：x<sub>i</sub>(t) = 0 為 TN、1 為 NTN）。</td><td class="page">p.2</td></tr>
+          <tr><td>控制平面</td><td>PCF 下發 DualSteer PCC rule 給 SMF，SMF 轉成 DualSteer Rule（經 NAS 給 UE）與 N4 rule（給 H-UPF）。</td><td class="page">p.2</td></tr>
+          <tr><td>PMFP 量測</td><td>UE 與 H-UPF 週期性探測兩條路徑（包含沒在用的那條），取得即時 PLR 與 RTT。</td><td class="page">p.1–2</td></tr>
+          <tr><td>通道模型</td><td>TN 用 3GPP TR 38.901 UMi；NTN 為 600 km LEO，斜距隨仰角變化（式 2），用 TR 38.811；SNR 由式 3 計算。</td><td class="page">p.3</td></tr>
+          <tr><td>封包遺失</td><td>無線端 PER 用 SNR 的 sigmoid 近似（式 4）；回程壅塞遺失＝max(0, 1 − 容量 ÷（UE 數 × 每 UE 流量））（式 5）；兩者合成總 PLR（式 6）。</td><td class="page">p.3</td></tr>
+          <tr><td>RTT 模型</td><td>成功時是 2 倍傳播延遲，遺失時加上 timeout 懲罰（式 7），所以塞車會讓 RTT 暴增。</td><td class="page">p.3</td></tr>
+          <tr><td>狀態</td><td>每個 UE 4 維，全部 UE 串成 4 × N<sub>UE</sub>。</td><td class="page">p.3</td></tr>
+          <tr><td>動作</td><td>所有 UE 的 0/1 向量，共 2<sup>N<sub>UE</sub></sup> 種，編成整數給 DQN。UE 多時會爆炸，所以限定小型基地台場景。</td><td class="page">p.4</td></tr>
+          <tr><td>獎勵</td><td>可靠度／延遲效率：(1 − 平均 PLR) ÷ (平均 RTT ÷ τ<sub>norm</sub> + ζ)，ζ = 1 避免除以 0。</td><td class="page">p.4</td></tr>
+          <tr><td>DQN 訓練</td><td>Experience replay + target network + ε-greedy（1.0 → 0.05）；2 層隱藏層各 256 個神經元，學習率 10<sup>−4</sup>，γ = 0.99。</td><td class="page">p.3–4</td></tr>
+          <tr><td>部署位置</td><td>代理放在 H-UPF，當作 DualSteer 現有規則之外「新增的一種導引模式」。</td><td class="page">p.2–3</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section class="section" id="s5">
+      <h2><span class="no">05</span>結果解讀</h2>
+      <div class="stats">
+        <div class="stat"><div class="big">−79%</div><div class="label">PLR 對比 3GPP Smallest Delay（9.5% → 2.0%）</div></div>
+        <div class="stat"><div class="big">3.9 ms</div><div class="label">平均 RTT，窮舉搜尋為 2.9 ms</div></div>
+        <div class="stat"><div class="big">807×</div><div class="label">推論速度對比窮舉搜尋（12 個 UE）</div></div>
+      </div>
+      <dl class="kv">
+        <dt>實驗設定</dt><dd>8 個 UE、每個 15 Mbps（總需求 120 Mbps，超過 TN 回程 100 Mbps）；TN 3.5 GHz／24 dBm；NTN 2 GHz S-band／37 dBm；LEO 600 km、仰角 30°–90°；200 m × 200 m 小型基地台；訓練 500 回合、評估 50 回合。（p.4，Table I／II）</dd>
+        <dt>比較對象</dt><dd>隨機、只走 TN、只走 NTN、Min-PLR、Min-RTT（＝3GPP ATSSS Smallest Delay）、負載門檻 LAT（ρ = 0.3）、窮舉搜尋（每步上限參考）。（p.4）</dd>
+        <dt>評估指標</dt><dd>平均 PLR、平均 RTT、平均獎勵、TN 使用率、每步推論時間。</dd>
+      </dl>
+      <h3>關鍵數字（N<sub>UE</sub> = 8，p.5）</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>方法</th><th>獎勵</th><th>PLR</th><th>RTT</th><th>TN 使用率</th></tr></thead>
+        <tbody>
+          <tr><td>窮舉搜尋（上限）</td><td class="num">0.91</td><td class="num">1.7%</td><td class="num">2.9 ms</td><td class="num">88.6%</td></tr>
+          <tr class="ours"><td>本文 DQN</td><td class="num">0.88</td><td class="num">2.0%</td><td class="num">3.9 ms</td><td class="num">69.4%</td></tr>
+          <tr><td>LAT</td><td class="num">0.77</td><td class="num">5.6%</td><td class="num">8.4 ms</td><td class="num">45%</td></tr>
+          <tr><td>Min-PLR</td><td class="num">0.77</td><td class="num">6.4%</td><td class="num">8.3 ms</td><td class="num">—</td></tr>
+          <tr><td>Min-RTT（3GPP Smallest Delay）</td><td class="num">0.69</td><td class="num">9.5%</td><td class="num">11.2 ms</td><td class="num">—</td></tr>
+          <tr><td>只走 TN</td><td class="num">0.44</td><td class="num">&gt; 22%</td><td class="num">23.7 ms</td><td class="num">100%</td></tr>
+          <tr><td>只走 NTN</td><td class="num">0.42</td><td class="num">&gt; 22%</td><td class="num">26.3 ms</td><td class="num">—</td></tr>
+        </tbody>
+      </table></div>
+      <p class="note">「—」表示論文文字沒有給這個數字。</p>
+      <h3>其他實驗</h3>
+      <ul>
+        <li><strong>UE 數 4 → 12</strong>（p.6）：本文 PLR 1.3% → 3.9%、RTT 2.4 → 6.2 ms；貪婪法在 12 個 UE 時 PLR 約 38%，LAT 升到 23.3%。</li>
+        <li><strong>仰角 30° → 90°</strong>（p.6）：本文 PLR 都低於 2.3%，RTT 4.9 → 3.5 ms。</li>
+        <li><strong>計算時間</strong>（p.6–7）：本文每步 0.06–0.08 ms；窮舉搜尋 0.19 ms（4 UE）→ 63.5 ms（12 UE）。</li>
+      </ul>
+      <h3>限制</h3>
+      <ul>
+        <li><span class="badge nice">論文自述</span>動作空間 2<sup>N<sub>UE</sub></sup> 指數成長，只適合小型基地台；未來方向是多代理 RL、UE 間公平性、多業者 DualSteer。（p.4、p.7）</li>
+        <li><span class="badge nice">論文自述</span>每個 UE 流量相同、不考慮重傳。（p.3）</li>
+        <li><span class="badge ai">🤖 AI 觀察・待確認</span>結果全部來自模擬，沒有實測；獎勵用的是「平均」PLR／RTT，可能犧牲個別 UE。</li>
+      </ul>
+    </section>
+
+    <section class="section" id="s6">
+      <h2><span class="no">06</span>術語表</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>縮寫</th><th>全名</th><th>白話解釋</th><th>頁碼</th></tr></thead>
+        <tbody>
+          <tr><td><b>TN</b></td><td>Terrestrial Network</td><td>地面網路，一般基地台</td><td class="page">p.1</td></tr>
+          <tr><td><b>NTN</b></td><td>Non-Terrestrial Network</td><td>非地面網路，這裡指衛星</td><td class="page">p.1</td></tr>
+          <tr><td><b>LEO</b></td><td>Low Earth Orbit</td><td>低軌衛星，高度幾百到兩千公里，延遲比同步衛星小很多</td><td class="page">p.1</td></tr>
+          <tr><td><b>DualSteer</b></td><td>—</td><td>3GPP Rel-19 的多接取架構，UE 用兩張 USIM 同時連兩個 3GPP 網路</td><td class="page">p.1</td></tr>
+          <tr><td><b>ATSSS</b></td><td>Access Traffic Steering, Switching and Splitting</td><td>較早的多接取架構，管理 3GPP 與非 3GPP（如 Wi-Fi）兩種接取</td><td class="page">p.1</td></tr>
+          <tr><td><b>USIM</b></td><td>Universal Subscriber Identity Module</td><td>SIM 卡，代表一個用戶身分</td><td class="page">p.1</td></tr>
+          <tr><td><b>PDU session</b></td><td>Protocol Data Unit session</td><td>UE 到核心網的一條資料連線</td><td class="page">p.1</td></tr>
+          <tr><td><b>DSG</b></td><td>DualSteer Session Group</td><td>把同一 UE 的兩個 PDU session 綁在一起的群組</td><td class="page">p.1</td></tr>
+          <tr><td><b>PMFP</b></td><td>Performance Measurement Function Protocol</td><td>定期探測路徑、量 PLR 和 RTT 的協定</td><td class="page">p.1</td></tr>
+          <tr><td><b>UPF／H-UPF</b></td><td>User Plane Function／Home-UPF</td><td>核心網中轉送使用者資料的節點；H-UPF 是本籍網路的錨點</td><td class="page">p.1–2</td></tr>
+          <tr><td><b>PCF</b></td><td>Policy Control Function</td><td>核心網中下發政策規則的單元</td><td class="page">p.2</td></tr>
+          <tr><td><b>SMF</b></td><td>Session Management Function</td><td>核心網中管理連線的單元</td><td class="page">p.2</td></tr>
+          <tr><td><b>PCC rule</b></td><td>Policy and Charging Control rule</td><td>政策與計費控制規則</td><td class="page">p.2</td></tr>
+          <tr><td><b>NAS</b></td><td>Non-Access Stratum</td><td>UE 與核心網之間的控制訊息層</td><td class="page">p.2</td></tr>
+          <tr><td><b>N4</b></td><td>—</td><td>SMF 與 UPF 之間的介面</td><td class="page">p.2</td></tr>
+          <tr><td><b>PLR</b></td><td>Packet Loss Rate</td><td>封包遺失率</td><td class="page">p.1</td></tr>
+          <tr><td><b>RTT</b></td><td>Round-Trip Time</td><td>來回延遲</td><td class="page">p.1</td></tr>
+          <tr><td><b>PER</b></td><td>Packet Error Rate</td><td>無線端封包錯誤率</td><td class="page">p.3</td></tr>
+          <tr><td><b>UMi</b></td><td>Urban Micro</td><td>3GPP 都市小型基地台通道模型</td><td class="page">p.3</td></tr>
+          <tr><td><b>MCS</b></td><td>Modulation and Coding Scheme</td><td>調變與編碼組合</td><td class="page">p.3</td></tr>
+          <tr><td><b>Backhaul</b></td><td>—</td><td>回程，基地台連回核心網的線路</td><td class="page">p.1</td></tr>
+          <tr><td><b>Feeder link</b></td><td>—</td><td>衛星連到地面閘道站的鏈路</td><td class="page">p.2</td></tr>
+          <tr><td><b>MDP</b></td><td>Markov Decision Process</td><td>馬可夫決策過程，RL 問題的標準數學框架</td><td class="page">p.2</td></tr>
+          <tr><td><b>DQN</b></td><td>Deep Q-Network</td><td>用神經網路估 Q 值的強化學習方法</td><td class="page">p.2</td></tr>
+          <tr><td><b>ε-greedy</b></td><td>—</td><td>以機率 ε 隨機探索，其餘時間選目前最好的動作</td><td class="page">p.4</td></tr>
+          <tr><td><b>Experience replay</b></td><td>—</td><td>把過去經驗存起來隨機抽樣訓練，讓學習更穩定</td><td class="page">p.4</td></tr>
+          <tr><td><b>Target network</b></td><td>—</td><td>定期複製的固定網路，用來算 TD 目標，避免目標一直跳動</td><td class="page">p.4</td></tr>
+          <tr><td><b>TD loss</b></td><td>Temporal-Difference loss</td><td>Q 值預測與「獎勵 + 下一步估計」之間的差距</td><td class="page">p.4</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section class="section" id="s7">
+      <h2><span class="no">07</span>先備知識</h2>
+      <ul class="prereq">
+        <li><span class="badge must">必懂</span>5G 核心網基本角色：UE、基地台、UPF、SMF、PCF 各自做什麼。</li>
+        <li><span class="badge must">必懂</span>Q-learning 與 DQN：狀態、動作、獎勵、Q 值、ε-greedy、replay buffer、target network。</li>
+        <li><span class="badge must">必懂</span>PLR 與 RTT 的意義，以及為什麼壅塞會讓兩者一起變差。</li>
+        <li><span class="badge nice">知道就好</span>ATSSS（Rel-16 起的多接取規範）和 DualSteer 的差別。</li>
+        <li><span class="badge nice">知道就好</span>LEO 衛星斜距與仰角的關係（仰角越低，距離越遠、損耗越大）。</li>
+        <li><span class="badge nice">知道就好</span>3GPP 通道模型 TR 38.901（地面）、TR 38.811（衛星）。</li>
+      </ul>
+    </section>
+
+    <section class="section" id="s8">
+      <h2><span class="no">08</span>跟我研究的關係</h2>
+      <div class="todo-box">
+        <strong>🤖 AI 草稿・待我修改</strong>
+        <ul>
+          <li><b>可以借用的地方：</b>把「多個使用者搶同一個資源」寫成集中式 MDP、一次決定所有人的做法；用 (1 − PLR) ÷ RTT 把可靠度和延遲合成單一獎勵；實驗設計用「3GPP 標準規則當 baseline、窮舉搜尋當上限」，比較有說服力；Table I 的模擬參數可以當 TN-NTN 模擬的起點。</li>
+          <li><b>跟我研究的差異：</b>目前只知道我的研究方向是「通訊網路」，判斷不了具體差異，<b>需要我補充</b>。</li>
+          <li><b>我還要查的問題：</b>DualSteer 與 ATSSS 的規格差異（3GPP TR 23.700-54）；PMFP 探測週期多長、會不會限制決策速度；UE 變多時怎麼改成多代理 RL；怎麼把公平性加進獎勵。</li>
+        </ul>
+        <p><b>建議評分：</b>⭐⭐⭐⭐。問題貼近 3GPP 最新規格、比較對象完整；但只有模擬、規模只到 12 個 UE。</p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<footer class="foot">筆記由 AI 依 AGENTS.md 規則整理、本人校對。原文版權屬原作者與出版單位，本頁僅為個人閱讀摘要。</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script src="../../assets/js/paper.js"></script>
+</body>
+</html>

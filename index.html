@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>論文筆記庫｜陳忠淳</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<header class="topbar"><div class="topbar-inner">
+  <a class="brand" href="./">論文筆記庫 <b>/</b> home</a>
+  <span id="count"></span>
+</div></header>
+
+<section class="hero">
+  <div class="kicker">PAPER NOTES ・ 通訊／訊號處理</div>
+  <h1>先看懂架構，再讀原文。</h1>
+  <p>我讀過的論文，每一篇都整理成同一套格式：一句話總結、問題卡、架構圖、方法重點、結果解讀、術語表、先備知識、跟我研究的關係。</p>
+</section>
+
+<div class="toolbar">
+  <input id="q" type="search" placeholder="搜尋標題、關鍵字…" aria-label="搜尋論文">
+  <div class="chips" id="tags"></div>
+</div>
+
+<main class="grid" id="list"></main>
+
+<footer class="foot">筆記由 AI 依 AGENTS.md 規則整理、本人校對。原文版權屬原作者與出版單位，本站僅為個人閱讀摘要。</footer>
+
+<script src="data/papers.js"></script>
+<script>
+(function () {
+  var papers = window.PAPERS || [];
+  var list = document.getElementById("list");
+  var tagBox = document.getElementById("tags");
+  var q = document.getElementById("q");
+  var active = "全部";
+
+  document.getElementById("count").textContent = papers.length + " 篇";
+
+  var tags = ["全部"];
+  papers.forEach(function (p) { p.tags.forEach(function (t) { if (tags.indexOf(t) < 0) tags.push(t); }); });
+  tags.forEach(function (t) {
+    var b = document.createElement("button");
+    b.className = "chip" + (t === active ? " active" : "");
+    b.textContent = t;
+    b.onclick = function () {
+      active = t;
+      tagBox.querySelectorAll(".chip").forEach(function (c) { c.classList.toggle("active", c.textContent === t); });
+      render();
+    };
+    tagBox.appendChild(b);
+  });
+
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+
+  function render() {
+    var kw = q.value.trim().toLowerCase();
+    var shown = papers.filter(function (p) {
+      var okTag = active === "全部" || p.tags.indexOf(active) >= 0;
+      var hay = (p.title + p.title_zh + p.tldr + p.tags.join(" ")).toLowerCase();
+      return okTag && (!kw || hay.indexOf(kw) >= 0);
+    });
+    list.innerHTML = shown.length ? shown.map(function (p) {
+      return '<a class="paper-card" href="papers/' + esc(p.slug) + '/">' +
+        '<div class="venue">' + esc(p.venue) + '</div>' +
+        '<h2>' + esc(p.title) + '</h2>' +
+        '<p class="zh">' + esc(p.title_zh) + '</p>' +
+        '<p class="tldr">' + esc(p.tldr) + '</p>' +
+        '<div class="row">' + p.tags.map(function (t) { return '<span class="tag">' + esc(t) + '</span>'; }).join("") + '</div>' +
+        '<div class="date">' + esc(p.read_date) + '・' + esc(p.status) + '</div>' +
+      '</a>';
+    }).join("") : '<p class="empty">找不到符合的論文。</p>';
+  }
+
+  q.addEventListener("input", render);
+  render();
+})();
+</script>
+</body>
+</html>
